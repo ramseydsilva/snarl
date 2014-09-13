@@ -63,8 +63,7 @@ func main () {
 	message := flag.String("message", "Just connected", "Your message")
 
 	flag.Parse()
-	fmt.Print(flag.Args())
-	if len(flag.Args()) == 0 {
+	if flag.NFlag() > 0 {
 		fmt.Println("Sending...")
 		broadcast(*name, *message)
 	} else {
