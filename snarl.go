@@ -28,12 +28,12 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	return err
 }
 
-func broadcast(name string, message string) {
+func broadcast(name string, message string, port int) {
 	packet := Message{DateTime: time.Now().Unix()}
 	copy(packet.Sender[:], name)
 	copy(packet.Message[:], message)
 
-	conn, err := net.Dial("udp", "255.255.255.255:9666")
+	conn, err := net.Dial("udp", fmt.Sprintf("255.255.255.255:%d", port))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,8 +42,8 @@ func broadcast(name string, message string) {
 	conn.Write(packetBytes)
 }
 
-func receive() {
-	addr, _ := net.ResolveUDPAddr("udp", ":9666")
+func receive(port int) {
+	addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		log.Fatal("Could not connect!")
@@ -59,16 +59,17 @@ func receive() {
 }
 
 func main () {
+	port := flag.Int("port", 9666, "Private channel")
 	name := flag.String("name", "anon", "Your username")
 	message := flag.String("message", "Just connected", "Your message")
 
 	flag.Parse()
-	if flag.NFlag() > 0 {
+	if len(flag.Args()) == 0 {
 		fmt.Println("Sending...")
-		broadcast(*name, *message)
+		broadcast(*name, *message, *port)
 	} else {
 		fmt.Println("Receiving...")
-		receive()
+		receive(*port)
 	}
 }
 
