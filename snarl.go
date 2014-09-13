@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"flag"
 	"fmt"
 	"net"
 	"bytes"
@@ -59,9 +59,14 @@ func receive() {
 }
 
 func main () {
-	if len(os.Args) == 1 {
+	name := flag.String("name", "anon", "Your username")
+	message := flag.String("message", "Just connected", "Your message")
+
+	flag.Parse()
+	fmt.Print(flag.Args())
+	if len(flag.Args()) == 0 {
 		fmt.Println("Sending...")
-		broadcast("Rob", "message!!!")
+		broadcast(*name, *message)
 	} else {
 		fmt.Println("Receiving...")
 		receive()
