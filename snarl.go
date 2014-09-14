@@ -1,19 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"flag"
 	"fmt"
-	"net"
-	"bytes"
-	"time"
 	"log"
-	"encoding/binary"
+	"net"
+	"time"
 )
 
 type Message struct {
-	Sender [20]byte
+	Sender   [20]byte
 	DateTime int64
-	Message [100]byte
+	Message  [100]byte
 }
 
 func (m *Message) MarshalBinary() ([]byte, error) {
@@ -28,16 +28,16 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	return err
 }
 
-func broadcast(name string, message string, port int) {
+func broadcast(name string, message string, domain string, port int) {
 	packet := Message{DateTime: time.Now().Unix()}
 	copy(packet.Sender[:], name)
 	copy(packet.Message[:], message)
 
-	conn, err := net.Dial("udp", fmt.Sprintf("255.255.255.255:%d", port))
+	conn, err := net.Dial("udp", fmt.Sprintf("%s:%d", domain, port))
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	packetBytes, _ := packet.MarshalBinary()
 	conn.Write(packetBytes)
 }
@@ -58,18 +58,18 @@ func receive(port int) {
 	}
 }
 
-func main () {
+func main() {
 	port := flag.Int("port", 9666, "Private channel")
+	domain := flag.String("domain", "255.255.255.255", "Domain")
 	name := flag.String("name", "anon", "Your username")
 	message := flag.String("message", "Just connected", "Your message")
 
 	flag.Parse()
 	if len(flag.Args()) == 0 {
 		fmt.Println("Sending...")
-		broadcast(*name, *message, *port)
+		broadcast(*name, *message, *domain, *port)
 	} else {
 		fmt.Println("Receiving...")
 		receive(*port)
 	}
 }
-
