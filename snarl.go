@@ -1,4 +1,4 @@
-package main
+package snarl
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	return err
 }
 
-func broadcast(name string, message string, domain string, port int) {
+func Broadcast(name string, message string, domain string, port int) {
 	packet := Message{DateTime: time.Now().Unix()}
 	copy(packet.Sender[:], name)
 	copy(packet.Message[:], message)
@@ -42,20 +42,24 @@ func broadcast(name string, message string, domain string, port int) {
 	conn.Write(packetBytes)
 }
 
-func receive(port int) {
+func Receive(port int) chan Message {
 	addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Fatal("Could not connect!")
+		log.Fatal("Could not connect")
 	}
 
-	for {
-		buf := make([]byte, 128)
-		conn.Read(buf)
-		var message Message
-		message.UnmarshalBinary(buf)
-		fmt.Printf("[%d]%s: %s\n", message.DateTime, string(message.Sender[:]), string(message.Message[:]))
-	}
+	messageChannel := make(chan Message)
+	go func() {
+		for {
+			var message Message
+			buf := make([]byte, 128)
+			conn.Read(buf)
+			message.UnmarshalBinary(buf)
+			messageChannel <- message
+		}
+	}()
+	return messageChannel
 }
 
 func main() {
@@ -67,9 +71,11 @@ func main() {
 	flag.Parse()
 	if len(flag.Args()) == 0 {
 		fmt.Println("Sending...")
-		broadcast(*name, *message, *domain, *port)
+		Broadcast(*name, *message, *domain, *port)
 	} else {
 		fmt.Println("Receiving...")
-		receive(*port)
+		for m := range Receive(*port) {
+			fmt.Printf("[%d] %s: %s\n", m.DateTime, string(m.Sender[:]), string(m.Message[:]))
+		}
 	}
 }
